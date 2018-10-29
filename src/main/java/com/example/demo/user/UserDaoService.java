@@ -2,9 +2,11 @@ package com.example.demo.user;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,6 +35,19 @@ public class UserDaoService {
 	
 	public User findOne(int id) {
 		return users.stream().filter(userIn -> userIn.getId() == id).findFirst().orElse(null);
+	}
+
+	public User deleteById(int id) {
+		//users.removeIf(user -> user.getId() == id );
+		
+		for(Iterator<User> it = users.iterator();it.hasNext();) {
+			User user = it.next();
+			if(user.getId() == id) {
+				it.remove();
+				return user;
+			}
+		}
+		return null;
 	}
 
 }
