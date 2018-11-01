@@ -2,6 +2,7 @@ package com.example.demo.user;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import javax.validation.Valid;
 import javax.websocket.server.PathParam;
@@ -25,6 +26,50 @@ public class UserResource {
 	@Autowired
 	private UserDaoService service;
 
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private PostRepository postRepository;
+
+	
+	
+	@GetMapping("/jpa/users")
+	public List<User> retrieveJpaAllUsers(){
+		return userRepository.findAll();
+	}
+	
+	@GetMapping("/jpa/users/{id}/posts")
+	public List<Post> retrieveJpaAllPostsUser(@PathVariable int id){
+		Optional<User> user = userRepository.findById(id);
+		
+		if(!user.isPresent()) {
+			throw new UserNotFoundException("id-"+id);
+		}
+		
+		return user.get().getPosts();
+	}
+
+	@GetMapping("/jpa/users/{id}")
+	public Resource<User> retrieveJpaUser(@PathVariable int id){
+		Optional<User> user = userRepository.findById(id);
+
+		if(!user.isPresent()) {
+			throw new UserNotFoundException("id-"+id);
+		}
+
+		Resource<User> res = new Resource<User>(user.get());
+
+		ControllerLinkBuilder lingTo = ControllerLinkBuilder.linkTo(
+				ControllerLinkBuilder.methodOn(this.getClass()).retrieveAllUsers());
+
+		res.add(lingTo.withRel("all-users"));
+
+		return res;
+
+	}
+	
+
 	@GetMapping("/users")
 	public List<User> retrieveAllUsers(){
 		return service.findAll();
@@ -36,14 +81,14 @@ public class UserResource {
 		if (user == null) {
 			throw new UserNotFoundException("id-"+id);
 		}
-		
+
 		Resource<User> res = new Resource<User>(user);
-		
+
 		ControllerLinkBuilder lingTo = ControllerLinkBuilder.linkTo(
-					ControllerLinkBuilder.methodOn(this.getClass()).retrieveAllUsers());
-		
+				ControllerLinkBuilder.methodOn(this.getClass()).retrieveAllUsers());
+
 		res.add(lingTo.withRel("all-users"));
-		
+
 		return res;
 	}
 
@@ -62,6 +107,35 @@ public class UserResource {
 		if(user == null) {
 			throw new UserNotFoundException("id-"+id);
 		}
+	}
+	
+	@PostMapping("/jpa/users")
+	public ResponseEntity<User> createJPAUser(@Valid @RequestBody User user) {
+		User savedUser = userRepository.save(user);
+		URI location =ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+				.buildAndExpand(savedUser.getId()).toUri();
+		return ResponseEntity.created(location).build();
+	}
+	
+	@PostMapping("/jpa/users/{id}/posts")
+	public ResponseEntity<User> createJPAUser(@PathVariable int id, @RequestBody Post post) {
+		
+		Optional<User> optionalUser = userRepository.findById(id);
+		if(!optionalUser.isPresent())
+			throw new UserNotFoundException("id-"+id);
+		
+		User user = optionalUser.get();
+		
+		post.setUser(user);
+		Post savedPost = postRepository.save(post);
+		URI location =ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+				.buildAndExpand(savedPost.getId()).toUri();
+		return ResponseEntity.created(location).build();
+	}
+
+	@DeleteMapping("/jpa/user/{id}")
+	public void deleteJPAUser(@PathVariable int id) {
+		userRepository.deleteById(id);
 	}
 
 
